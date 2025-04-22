@@ -61,7 +61,7 @@ class Database implements ConnectionInterface
      *
      * @return string|null
      */
-    public function getName()
+    public function getDatabaseName()
     {
         return $this->getConfig('name');
     }
@@ -73,7 +73,7 @@ class Database implements ConnectionInterface
      *
      * @return \Illuminate\Database\Query\Builder
      */
-    public function table($table)
+    public function table($table, $as = null)
     {
         $processor = $this->getPostProcessor();
 
@@ -125,7 +125,7 @@ class Database implements ConnectionInterface
         $result = $this->db->get_row($query);
 
         if ($result === false || $this->db->last_error)
-            throw new QueryException($query, $bindings, new \Exception($this->db->last_error));
+            throw new QueryException($this->db, $query, $bindings, new \Exception($this->db->last_error));
 
         return $result;
     }
@@ -147,7 +147,7 @@ class Database implements ConnectionInterface
         $result = $this->db->get_results($query);
 
         if ($result === false || $this->db->last_error)
-            throw new QueryException($query, $bindings, new \Exception($this->db->last_error));
+            throw new QueryException($this->db, $query, $bindings, new \Exception($this->db->last_error));
 
         return $result;
     }
@@ -186,7 +186,7 @@ class Database implements ConnectionInterface
 
         $bindings = array_map(function ($replace) {
             if (is_string($replace)) {
-                $replace = "'" . esc_sql($replace) . "'";
+                $replace = "'" . \esc_sql($replace) . "'";
             } elseif ($replace === null) {
                 $replace = "null";
             }
@@ -216,7 +216,7 @@ class Database implements ConnectionInterface
         $result = $this->db->query($new_query);
 
         if ($result === false || $this->db->last_error)
-            throw new QueryException($new_query, $bindings, new \Exception($this->db->last_error));
+            throw new QueryException($this->db, $new_query, $bindings, new \Exception($this->db->last_error));
 
         return (array) $result;
     }
@@ -290,7 +290,7 @@ class Database implements ConnectionInterface
         $result = $this->db->query($new_query);
 
         if ($result === false || $this->db->last_error)
-            throw new QueryException($new_query, $bindings, new \Exception($this->db->last_error));
+            throw new QueryException($this->db, $new_query, $bindings, new \Exception($this->db->last_error));
 
         return intval($result);
     }
@@ -469,5 +469,26 @@ class Database implements ConnectionInterface
     public function getConfig($option = null)
     {
         return Arr::get($this->config, $option);
+    }
+
+    
+    /**
+     * Set an option in the configuration options.
+     *
+     * @param  string $option
+     * @param  mixed $value
+     *
+     * @return void
+     */
+    public function scalar($query, $bindings = [], $useReadPdo = true)
+    {
+        $query = $this->bind_params($query, $bindings);
+
+        $result = $this->db->get_var($query);
+
+        if ($result === false || $this->db->last_error)
+            throw new QueryException($this->db, $query, $bindings, new \Exception($this->db->last_error));
+
+        return $result;
     }
 }
